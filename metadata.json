@@ -1,0 +1,6 @@
+{
+  "name": "Candy Line: Go Fish",
+  "description": "A tactile, real-time 2-player tabletop strategy game inspired by the viral candy divider game.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

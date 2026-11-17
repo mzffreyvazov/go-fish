@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  html,
+  body {
+    font-family: var(--font-sans);
+    color: #1c1917;
+    background-color: #f7f5f0;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display);
+  }
+}
+
+.wood-grain {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(92, 53, 24, 0.14) 0px,
+      rgba(92, 53, 24, 0.14) 2px,
+      transparent 2px,
+      transparent 9px
+    ),
+    linear-gradient(
+      90deg,
+      #7c4a21 0%,
+      #a86c39 18%,
+      #c18651 45%,
+      #9c6231 72%,
+      #6f411b 100%
+    );
+}
+
+.wood-grain-horizontal {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(92, 53, 24, 0.14) 0px,
+      rgba(92, 53, 24, 0.14) 2px,
+      transparent 2px,
+      transparent 9px
+    ),
+    linear-gradient(
+      180deg,
+      #c18651 0%,
+      #a86c39 38%,
+      #8b5629 75%,
+      #6f411b 100%
+    );
+}
+
+.paper-mat-left {
+  background-color: #fffdf8;
+  background-image: radial-gradient(rgba(120, 113, 108, 0.06) 1px, transparent 0);
+  background-size: 16px 16px;
+}
+
+.paper-mat-right {
+  background-color: #f8fafc;
+  background-image: radial-gradient(rgba(100, 116, 139, 0.06) 1px, transparent 0);
+  background-size: 16px 16px;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
