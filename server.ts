@@ -23,7 +23,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT) || 3000;
-const IS_PROD = process.env.NODE_ENV === 'production';
+const IS_PROD =
+  process.env.NODE_ENV === 'production' ||
+  process.env.RENDER === 'true' ||
+  Boolean(process.env.RAILWAY_ENVIRONMENT);
 
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const ROOM_TTL_MS = 1000 * 60 * 60 * 4; // 4 hours
@@ -59,9 +62,13 @@ function sanitizeName(name: unknown, fallback: string): string {
 async function bootstrap() {
   const app = express();
   const httpServer = http.createServer(app);
+  const allowedOrigin = process.env.CLIENT_ORIGIN?.trim();
   const io = new Server(httpServer, {
     cors: {
-      origin: '*',
+      origin:
+        allowedOrigin && allowedOrigin !== '*'
+          ? allowedOrigin.split(',').map((s) => s.trim())
+          : '*',
     },
   });
 

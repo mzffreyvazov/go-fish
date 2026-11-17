@@ -183,8 +183,11 @@ export default function App() {
       return socketRef.current;
     }
 
-    const sock = io({
+    const socketUrl = import.meta.env.VITE_SOCKET_URL?.trim() || undefined;
+    const sock = io(socketUrl, {
       transports: ['websocket', 'polling'],
+      reconnectionAttempts: 3,
+      timeout: 7000,
     });
 
     sock.on('room:state', (view: ClientMatchView) => {
@@ -210,38 +213,90 @@ export default function App() {
     };
   }, []);
 
+  const emitRoomAction = useCallback(
+    <T extends { ok?: boolean; state?: ClientMatchView; error?: string }>(
+      sock: Socket,
+      event: string,
+      payload: Record<string, unknown>,
+      fallbackError: string,
+    ): Promise<T> => {
+      return new Promise<T>((resolve, reject) => {
+        let settled = false;
+        const finishError = (err: Error) => {
+          if (settled) return;
+          settled = true;
+          window.clearTimeout(timer);
+          sock.off('connect_error', onConnectError);
+          reject(err);
+        };
+
+        const onConnectError = () => {
+          finishError(
+            new Error(
+              'Unable to reach the multiplayer WebSocket server. If deployed on Vercel, set VITE_SOCKET_URL to a Node/Socket.io backend (e.g. Render or Railway) or host the full app on a Node.js server.',
+            ),
+          );
+        };
+
+        const timer = window.setTimeout(() => {
+          finishError(
+            new Error(
+              'Connection to the multiplayer server timed out. Check your server or try Local Pass & Play.',
+            ),
+          );
+        }, 7000);
+
+        if (!sock.connected) {
+          sock.once('connect_error', onConnectError);
+        }
+
+        sock.emit(event, payload, (res: T) => {
+          if (settled) return;
+          settled = true;
+          window.clearTimeout(timer);
+          sock.off('connect_error', onConnectError);
+          if (res?.ok) {
+            resolve(res);
+          } else {
+            reject(new Error(res?.error ?? fallbackError));
+          }
+        });
+      });
+    },
+    [],
+  );
+
   const handleCreateOnlineRoom = useCallback(
     async (playerName: string, settings: RoomSettings) => {
       setBusy(true);
       setErrorMessage(null);
       try {
         const sock = ensureSocket();
-        await new Promise<void>((resolve, reject) => {
-          sock.emit(
-            'room:create',
-            {
-              playerName,
-              playerToken: playerTokenRef.current,
-              settings,
-            },
-            (res: { ok?: boolean; state?: ClientMatchView; error?: string }) => {
-              if (res?.ok && res.state) {
-                setMode('online');
-                setOnlineMatch(res.state);
-                resolve();
-              } else {
-                reject(new Error(res?.error ?? 'Could not create room.'));
-              }
-            },
-          );
-        });
+        const res = await emitRoomAction<{
+          ok?: boolean;
+          state?: ClientMatchView;
+          error?: string;
+        }>(
+          sock,
+          'room:create',
+          {
+            playerName,
+            playerToken: playerTokenRef.current,
+            settings,
+          },
+          'Could not create room.',
+        );
+        if (res.state) {
+          setMode('online');
+          setOnlineMatch(res.state);
+        }
       } catch (err) {
         setErrorMessage(err instanceof Error ? err.message : 'Connection failed.');
       } finally {
         setBusy(false);
       }
     },
-    [ensureSocket],
+    [ensureSocket, emitRoomAction],
   );
 
   const handleJoinOnlineRoom = useCallback(
@@ -250,32 +305,31 @@ export default function App() {
       setErrorMessage(null);
       try {
         const sock = ensureSocket();
-        await new Promise<void>((resolve, reject) => {
-          sock.emit(
-            'room:join',
-            {
-              code,
-              playerName,
-              playerToken: playerTokenRef.current,
-            },
-            (res: { ok?: boolean; state?: ClientMatchView; error?: string }) => {
-              if (res?.ok && res.state) {
-                setMode('online');
-                setOnlineMatch(res.state);
-                resolve();
-              } else {
-                reject(new Error(res?.error ?? 'Could not join room.'));
-              }
-            },
-          );
-        });
+        const res = await emitRoomAction<{
+          ok?: boolean;
+          state?: ClientMatchView;
+          error?: string;
+        }>(
+          sock,
+          'room:join',
+          {
+            code,
+            playerName,
+            playerToken: playerTokenRef.current,
+          },
+          'Could not join room.',
+        );
+        if (res.state) {
+          setMode('online');
+          setOnlineMatch(res.state);
+        }
       } catch (err) {
         setErrorMessage(err instanceof Error ? err.message : 'Unable to join room.');
       } finally {
         setBusy(false);
       }
     },
-    [ensureSocket],
+    [ensureSocket, emitRoomAction],
   );
 
   const handleStartLocalMatch = useCallback(
